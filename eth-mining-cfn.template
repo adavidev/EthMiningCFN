@@ -29,10 +29,10 @@
 
   "Mappings" : {
     "AWSRegion2AMI" : {
-      "us-east-1"        : { "AMI" : "ami-29b84953" },
-      "us-east-2"        : { "AMI" : "ami-434a6726" },
-      "us-west-1"        : { "AMI" : "ami-be4ea3c6" },
-      "us-west-2"        : { "AMI" : "ami-cfe5cfaf" }
+      "us-east-1"        : { "AMI" : "ami-816b9bfb" },
+      "us-east-2"        : { "AMI" : "ami-7c5b7619" },
+      "us-west-1"        : { "AMI" : "ami-32655552" },
+      "us-west-2"        : { "AMI" : "ami-bce41dc4" }
       }
   },
 
