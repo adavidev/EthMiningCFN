@@ -1,0 +1,222 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+
+  "Description" : "AWS CloudFormation Template to launch a Spot Fleet of Ether mining instances",
+
+  "Parameters" : {
+    "FleetSize" : {
+      "Description" : "The size of your mining fleet",
+      "Type" : "Number",
+      "Default" : 1,
+      "MinValue" : 1,
+      "MaxValue" : 100
+    },
+
+    "SpotPrice" : {
+      "Description" : "The amount, in USD, you're willing to spend per GPU, per hour (default $0.20)",
+      "Type" : "Number",
+      "Default" : 0.2,
+      "MinValue" : 0.01,
+      "MaxValue" : 10
+    },
+
+    "Wallet" : {
+      "Description" : "Your Ethereum wallet address",
+      "Type" : "String",
+      "Default" : "0xf395eed96579a679859dacaf0bfda096f18fbffb"
+    }  
+  },
+
+  "Mappings" : {
+    "AWSRegion2AMI" : {
+      "us-east-1"        : { "AMI" : "ami-29b84953" },
+      "us-east-2"        : { "AMI" : "ami-434a6726" },
+      "us-west-1"        : { "AMI" : "ami-be4ea3c6" },
+      "us-west-2"        : { "AMI" : "ami-cfe5cfaf" }
+      }
+  },
+
+  "Resources" : {
+     "SpotFleetRole": {
+         "Type": "AWS::IAM::Role",
+         "Properties": {
+            "AssumeRolePolicyDocument": {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                    "Sid": "",
+                    "Effect": "Allow",
+                    "Principal": {
+                        "Service": "spotfleet.amazonaws.com"
+                    },
+                    "Action": "sts:AssumeRole"
+                    }
+                ]
+            },
+            "Policies": [ {
+               "PolicyName": "root",
+               "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Action": [
+                                "ec2:DescribeImages",
+                                "ec2:DescribeSubnets",
+                                "ec2:RequestSpotInstances",
+                                "ec2:TerminateInstances",
+                                "ec2:DescribeInstanceStatus",
+                                "ec2:CreateTags"
+                            ],
+                            "Resource": [
+                                "*"
+                            ]
+                        },
+                        {
+                            "Effect": "Allow",
+                            "Action": "iam:PassRole",
+                            "Condition": {
+                                "StringEquals": {
+                                    "iam:PassedToService": "ec2.amazonaws.com"
+                                }
+                            },
+                            "Resource": [
+                                "*"
+                            ]
+                        }
+                    ]
+               }
+            } ]
+         }
+     },
+     "EtherSpotFleet": {
+        "Type": "AWS::EC2::SpotFleet",
+        "Properties": {
+                "SpotFleetRequestConfigData": {
+                "IamFleetRole": { "Fn::GetAtt" : [ "SpotFleetRole", "Arn" ] },
+                "SpotPrice": { "Ref" : "SpotPrice" },
+                "AllocationStrategy" : "lowestPrice",
+                "TargetCapacity": { "Ref": "FleetSize" },
+                "LaunchSpecifications": [
+                {
+                    "InstanceType": "g3.4xlarge",
+                    "WeightedCapacity": 1,
+                    "ImageId": { "Fn::FindInMap": [ "AWSRegion2AMI", { "Ref" : "AWS::Region" }, "AMI" ] },
+                    "SecurityGroups": [ { "GroupId": { "Fn::GetAtt": [ "InstanceSecurityGroup", "GroupId" ] } } ],
+                    "UserData" : { "Fn::Base64" : { "Fn::Join" : [ "", [ 
+                        "#!/bin/bash -xe\n",
+                        "ethminer -U -F http://eth-us-east1.nanopool.org:8888/", 
+                        { "Ref" : "Wallet" },
+                        "/aws$(ec2metadata --instance-id)/a@b.com --cuda-devices $(nvidia-smi | grep 'Off' | awk '{print $2}' ORS=' ') --farm-recheck 200" 
+                    ]]}}
+                },
+                {
+                    "InstanceType": "g3.8xlarge",
+                    "WeightedCapacity": 2,
+                    "ImageId": { "Fn::FindInMap": [ "AWSRegion2AMI", { "Ref" : "AWS::Region" }, "AMI" ] },
+                    "SecurityGroups": [ { "GroupId": { "Fn::GetAtt": [ "InstanceSecurityGroup", "GroupId" ] } } ],
+                    "UserData" : { "Fn::Base64" : { "Fn::Join" : [ "", [ 
+                        "#!/bin/bash -xe\n",
+                        "ethminer -U -F http://eth-us-east1.nanopool.org:8888/", 
+                        { "Ref" : "Wallet" },
+                        "/aws$(ec2metadata --instance-id)/a@b.com --cuda-devices $(nvidia-smi | grep 'Off' | awk '{print $2}' ORS=' ') --farm-recheck 200" 
+                    ]]}}
+                },
+                {
+                    "InstanceType": "g3.16xlarge",
+                    "WeightedCapacity": 4,
+                    "ImageId": { "Fn::FindInMap": [ "AWSRegion2AMI", { "Ref" : "AWS::Region" }, "AMI" ] },
+                    "SecurityGroups": [ { "GroupId": { "Fn::GetAtt": [ "InstanceSecurityGroup", "GroupId" ] } } ],
+                    "UserData" : { "Fn::Base64" : { "Fn::Join" : [ "", [ 
+                        "#!/bin/bash -xe\n",
+                        "ethminer -U -F http://eth-us-east1.nanopool.org:8888/", 
+                        { "Ref" : "Wallet" },
+                        "/aws$(ec2metadata --instance-id)/a@b.com --cuda-devices $(nvidia-smi | grep 'Off' | awk '{print $2}' ORS=' ') --farm-recheck 200" 
+                    ]]}}
+                },
+                                {
+                    "InstanceType": "g2.2xlarge",
+                    "WeightedCapacity": 1,
+                    "ImageId": { "Fn::FindInMap": [ "AWSRegion2AMI", { "Ref" : "AWS::Region" }, "AMI" ] },
+                    "SecurityGroups": [ { "GroupId": { "Fn::GetAtt": [ "InstanceSecurityGroup", "GroupId" ] } } ],
+                    "UserData" : { "Fn::Base64" : { "Fn::Join" : [ "", [ 
+                        "#!/bin/bash -xe\n",
+                        "ethminer -U -F http://eth-us-east1.nanopool.org:8888/", 
+                        { "Ref" : "Wallet" },
+                        "/aws$(ec2metadata --instance-id)/a@b.com --cuda-devices $(nvidia-smi | grep 'Off' | awk '{print $2}' ORS=' ') --farm-recheck 200" 
+                    ]]}}
+                },
+                {
+                    "InstanceType": "g2.8xlarge",
+                    "WeightedCapacity": 4,
+                    "ImageId": { "Fn::FindInMap": [ "AWSRegion2AMI", { "Ref" : "AWS::Region" }, "AMI" ] },
+                    "SecurityGroups": [ { "GroupId": { "Fn::GetAtt": [ "InstanceSecurityGroup", "GroupId" ] } } ],
+                    "UserData" : { "Fn::Base64" : { "Fn::Join" : [ "", [ 
+                        "#!/bin/bash -xe\n",
+                        "ethminer -U -F http://eth-us-east1.nanopool.org:8888/", 
+                        { "Ref" : "Wallet" },
+                        "/aws$(ec2metadata --instance-id)/a@b.com --cuda-devices $(nvidia-smi | grep 'Off' | awk '{print $2}' ORS=' ') --farm-recheck 200" 
+                    ]]}}
+                },
+                {
+                    "InstanceType": "p2.xlarge",
+                    "WeightedCapacity": 1,
+                    "ImageId": { "Fn::FindInMap": [ "AWSRegion2AMI", { "Ref" : "AWS::Region" }, "AMI" ] },
+                    "SecurityGroups": [ { "GroupId": { "Fn::GetAtt": [ "InstanceSecurityGroup", "GroupId" ] } } ],
+                    "UserData" : { "Fn::Base64" : { "Fn::Join" : [ "", [ 
+                        "#!/bin/bash -xe\n",
+                        "ethminer -U -F http://eth-us-east1.nanopool.org:8888/", 
+                        { "Ref" : "Wallet" },
+                        "/aws$(ec2metadata --instance-id)/a@b.com --cuda-devices $(nvidia-smi | grep 'Off' | awk '{print $2}' ORS=' ') --farm-recheck 200" 
+                    ]]}}
+                },
+                                {
+                    "InstanceType": "p2.8xlarge",
+                    "WeightedCapacity": 8,
+                    "ImageId": { "Fn::FindInMap": [ "AWSRegion2AMI", { "Ref" : "AWS::Region" }, "AMI" ] },
+                    "SecurityGroups": [ { "GroupId": { "Fn::GetAtt": [ "InstanceSecurityGroup", "GroupId" ] } } ],
+                    "UserData" : { "Fn::Base64" : { "Fn::Join" : [ "", [ 
+                        "#!/bin/bash -xe\n",
+                        "ethminer -U -F http://eth-us-east1.nanopool.org:8888/", 
+                        { "Ref" : "Wallet" },
+                        "/aws$(ec2metadata --instance-id)/a@b.com --cuda-devices $(nvidia-smi | grep 'Off' | awk '{print $2}' ORS=' ') --farm-recheck 200" 
+                    ]]}}
+                },
+                {
+                    "InstanceType": "p2.16xlarge",
+                    "WeightedCapacity": 16,
+                    "ImageId": { "Fn::FindInMap": [ "AWSRegion2AMI", { "Ref" : "AWS::Region" }, "AMI" ] },
+                    "SecurityGroups": [ { "GroupId": { "Fn::GetAtt": [ "InstanceSecurityGroup", "GroupId" ] } } ],
+                    "UserData" : { "Fn::Base64" : { "Fn::Join" : [ "", [ 
+                        "#!/bin/bash -xe\n",
+                        "ethminer -U -F http://eth-us-east1.nanopool.org:8888/", 
+                        { "Ref" : "Wallet" },
+                        "/aws$(ec2metadata --instance-id)/a@b.com --cuda-devices $(nvidia-smi | grep 'Off' | awk '{print $2}' ORS=' ') --farm-recheck 200" 
+                    ]]}}
+                }
+                ]
+            }
+        }
+    },
+
+    "InstanceSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Enable SSH access via port 22",
+        "SecurityGroupIngress" : [ {
+          "IpProtocol" : "tcp",
+          "FromPort" : "22",
+          "ToPort" : "22",
+          "CidrIp" : "0.0.0.0/0"
+        } ]
+      }
+    }
+  },
+
+  "Outputs" : {
+    "FleetId" : {
+      "Description" : "Spot Fleet ID",
+      "Value" : { "Ref" : "EtherSpotFleet" }
+    }
+  }
+}
